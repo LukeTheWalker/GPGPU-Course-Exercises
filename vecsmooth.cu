@@ -119,7 +119,7 @@ int main (int argc, char * argv[]){
     printf("init : %f ms (%f GB/s)\n", t1, memsize/t1/1e6);
 
     cudaEventElapsedTime(&t1, post_init, post_smooth);
-    printf("smooth : %f ms (%f GB/s)\n", t1, 2*memsize/t1/1e6);
+    printf("smooth : %f ms (%f GB/s)\n", t1, 4*memsize/t1/1e6);
 
     cudaEventElapsedTime(&t1, post_smooth, post_memcpy);
     printf("memcp: %f ms (%f GB/s)\n", t1, memsize/t1/1e6);
