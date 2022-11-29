@@ -90,7 +90,7 @@ int main (int argc, char * argv[]){
     printf("memcp: %f ms (%f GB/s)\n", t1, memsize/t1/1e6);
 
     cudaEventElapsedTime(&t1, post_memcpy, post_verify);
-    printf("check: %f ms");
+    printf("check: %f ms\n", t1);
 
     cudaFree(d_a);
     cudaFreeHost(h_a);
