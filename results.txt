@@ -1,0 +1,36 @@
+--------------------- Running vecsmooth 
+make: 'vecsmooth' is up to date.
+init : 5.047296 ms (425.472096 GB/s)
+smooth : 10.582016 ms (811.748416 GB/s)
+memcp: 163.317947 ms (13.149098 GB/s)
+check: 688.107117 ms
+--------------------- Running vecsmooth_vec 
+make: 'vecsmooth_vec' is up to date.
+init : 5.055488 ms (424.782656 GB/s)
+smooth : 10.349568 ms (311.242494 GB/s)
+memcp: 163.312698 ms (13.149520 GB/s)
+check: 710.881958 ms
+--------------------- Running vecsmooth_lmem 
+nvcc vecsmooth_lmem.cu -arch=sm_86 -o vecsmooth_lmem
+init : 5.058560 ms (424.524704 GB/s)
+smooth : 10.906624 ms (787.588800 GB/s)
+memcp: 163.318207 ms (13.149077 GB/s)
+check: 725.873169 ms
+--------------------- Running vecsmooth_lmem OVERSIZE
+make: 'vecsmooth_lmem' is up to date.
+init : 5.046272 ms (425.558464 GB/s)
+smooth : 10.658816 ms (805.899456 GB/s)
+memcp: 163.246399 ms (13.154861 GB/s)
+check: 711.183044 ms
+--------------------- Running vecsmooth_lmem_vec 
+nvcc vecsmooth_lmem_vec.cu -arch=sm_86 -o vecsmooth_lmem_vec
+init : 5.046272 ms (425.558464 GB/s)
+smooth : 11.528192 ms (745.124224 GB/s)
+memcp: 163.283463 ms (13.151875 GB/s)
+check: 686.432739 ms
+--------------------- Running vecsmooth_lmem_vec  OVERSIZE
+make: 'vecsmooth_lmem_vec' is up to date.
+init : 5.061632 ms (424.267040 GB/s)
+smooth : 11.524096 ms (745.389056 GB/s)
+memcp: 163.306595 ms (13.150012 GB/s)
+check: 690.817566 ms
