@@ -3,6 +3,10 @@
 #include <stdlib.h>
 #include <utility>
 
+__device__ void print_int4(int4 a) {
+    printf("%d %d %d %d\n", a.x, a.y, a.z, a.w);
+}
+
 void cuda_err_check (cudaError_t err, const char *file, int line)
 {
     if (err != cudaSuccess)
@@ -67,18 +71,27 @@ __global__ void smooth_lmem_oversize_v4 (int4 * d_in, int4 * d_out, int n){
     int idx = threadIdx.x + blockIdx.x * blockDim.x;
     int lidx = threadIdx.x;
     if (idx >= n) return;
-    int4 * lmem_ptr = (int4 *) (lmem_oversize+1);
+    int4 * lmem_ptr = (int4 *) (lmem_oversize);
     // printf("lmem_ptr = %p, lmem_oversize = %p\n, lmem_ptr - lmem_oversize = %lu\n", lmem_ptr, lmem_oversize, (bool*)lmem_ptr - (bool*)lmem_oversize);
-    int * first = lmem_oversize;
-    int * last = lmem_oversize + blockDim.x + 1;
+    int * first = lmem_oversize + (blockDim.x * 4);
+    int * last =  lmem_oversize + (blockDim.x * 4 + 1);
 
     lmem_ptr[lidx] = d_in[idx];
-    if (lidx == 0 && idx != 0) 
+
+    // printf("base = %p, first = %p, last = %p, my_ptr = %p, block_number = %d, idx = %d, lidx: %d\n",  lmem_oversize, first, last, &(lmem_ptr[lidx]), blockIdx.x, idx, lidx);
+    // print_int4(lmem_ptr[lidx]);
+
+    if (lidx == 0 && idx != 0) {
         // *first = ((int*)d_in)[idx*4-1];
         *first = d_in[idx - 1].w;
-    if (lidx == blockDim.x - 1 && idx != n - 1)
+        // printf("idx: %d, lidx: %d, first = %d\n", idx, lidx, *first);
+    }
+
+    if (lidx == blockDim.x - 1 && idx != n - 1){
         // *last = ((int*)d_in)[idx*4+4];
         *last = d_in[idx + 1].x;
+        // printf("idx: %d, lidx: %d, last = %d\n", idx, lidx, *last);
+    }
 
     __syncthreads();
 
@@ -87,15 +100,25 @@ __global__ void smooth_lmem_oversize_v4 (int4 * d_in, int4 * d_out, int n){
     int4 prev = {0, sum.x, sum.y, sum.z};
     int4 next = {sum.y, sum.z, sum.w, 0};
 
-    if (idx > 0) {
+    // se non sono il primo elemento del work group il mio predecessore sarà in local memory
+    if (lidx != 0) 
+        first = &(lmem_ptr[lidx - 1].w);
+
+    // se non sono l'ultimo elemento del work group il mio successore sarà in local memory
+    if (lidx != blockDim.x - 1)
+        last = &(lmem_ptr[lidx + 1].x);
+
+    if (idx != 0) {
         prev.x = *first; 
         div.x++;
     }
 
-    if (idx < n-1) {
+    if (idx != n-1) {
         next.w = *last;
         div.w++;
     }
+
+    // print_int4(prev);
 
     d_out[idx] = {(sum.x + prev.x + next.x) / div.x,
                   (sum.y + prev.y + next.y) / div.y,
@@ -107,6 +130,7 @@ void smooth_array(int * d_in, int * d_out, int n){
     int lws = 256;
     int nblks = (n + lws - 1) / lws;
 #if 1
+    // printf("shared memory size = %lu\n", lws * sizeof(int4) + 2 * sizeof(int));
     smooth_lmem_oversize_v4<<<nblks, lws, lws * sizeof(int4) + 2 * sizeof(int)>>>((int4 *)d_in, (int4 *)d_out, n/4);
 #else
     smooth_lmem_v4<<<nblks, lws, lws * sizeof(int4)>>>((int4 *)d_in, (int4 *)d_out, n/4);
