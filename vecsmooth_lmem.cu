@@ -90,7 +90,8 @@ void smooth_array(int * d_in, int * d_out, int n){
     int lws = 256;
     int nblks = (n + lws - 1) / lws;
 #if 1
-    smooth_lmem_oversize<<<nblks, lws, lws * sizeof(int) + 2>>>(d_in, d_out, n);
+    // DOMANDA: prima mi sono dimenticato di aggiungere 2 alla lws, non è crashato, perché?
+    smooth_lmem_oversize<<<nblks, lws, (lws+2) * sizeof(int)>>>(d_in, d_out, n);
 #else
     smooth_lmem<<<nblks, lws, lws * sizeof(int)>>>(d_in, d_out, n);
 #endif
