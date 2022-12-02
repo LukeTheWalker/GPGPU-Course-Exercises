@@ -128,12 +128,13 @@ __global__ void smooth_lmem_oversize_v4 (int4 * d_in, int4 * d_out, int n){
 
 void smooth_array(int * d_in, int * d_out, int n){
     int lws = 256;
+    n /= 4;
     int nblks = (n + lws - 1) / lws;
 #if 1
     // printf("shared memory size = %lu\n", lws * sizeof(int4) + 2 * sizeof(int));
-    smooth_lmem_oversize_v4<<<nblks, lws, lws * sizeof(int4) + 2 * sizeof(int)>>>((int4 *)d_in, (int4 *)d_out, n/4);
+    smooth_lmem_oversize_v4<<<nblks, lws, lws * sizeof(int4) + 2 * sizeof(int)>>>((int4 *)d_in, (int4 *)d_out, n);
 #else
-    smooth_lmem_v4<<<nblks, lws, lws * sizeof(int4)>>>((int4 *)d_in, (int4 *)d_out, n/4);
+    smooth_lmem_v4<<<nblks, lws, lws * sizeof(int4)>>>((int4 *)d_in, (int4 *)d_out, n);
 #endif
 }
 
