@@ -8,14 +8,25 @@
 
 #include "utils.cu"
 
-__global__ void compute_predicate(int4 *d_in, int4 *d_flags, int nquarts){
-    int gi = threadIdx.x + blockIdx.x * blockDim.x;
-    if (gi >= nquarts) return;
-    int4 val = d_in[gi];
-    d_flags[gi] = {val.x % 2 == 1, val.y % 2 == 1, val.z % 2 == 1, val.w % 2 == 1};
-}
+struct check_even {
+    __device__ int4 operator()(int4 dat) {
+        return {
+            dat.x % 2 == 0,
+            dat.y % 2 == 0,
+            dat.z % 2 == 0,
+            dat.w % 2 == 0,
+        };
+    }
+};
+
+struct simple_sum {
+    __device__ int4 operator()(int4 x) {
+        return x;
+    }
+};
 
 // scan of all elements in the workgroup window
+template<typename F>
 __device__ int scan_single_element(
     int first_wg_el, 
     int end_wg_el, 
@@ -28,9 +39,10 @@ __device__ int scan_single_element(
     int li = threadIdx.x;
     int gi = first_wg_el + li;
     int lws = blockDim.x;
+    F functor;
     // scan of single work-item (quart of int)
     if (gi < end_wg_el){
-        val = in[gi];
+        val = functor(in[gi]);
         // val.s1 += val.s0 ; val.s3 += val.s2;
         val.y += val.x; val.w += val.z;
         // val.s2 += val.s1 ; val.s3 += val.s1;
@@ -73,6 +85,7 @@ __device__ int scan_single_element(
 	return lmem[lws - 1];
 }
 
+template<typename F>
 __global__ void scan_sliding_window(
     int4 *d_in, 
     int4 *d_out,
@@ -103,7 +116,7 @@ __global__ void scan_sliding_window(
     int tail = 0;
 
     while (first_el < last_el) {
-		tail += scan_single_element(first_el, last_el, tail, d_out, d_in, lmem);
+		tail += scan_single_element<F>(first_el, last_el, tail, d_out, d_in, lmem);
 		first_el += lws;
 		__syncthreads();
 	}
@@ -176,7 +189,7 @@ int main (int argc, char * argv[]){
 
     int ntails = ngroups > 1 ? round_mul_up(ngroups, 4) : ngroups;
 
-    int *h_a, *d_in, *d_positions, *d_out, *d_tails, *d_flags;
+    int *h_a, *d_in, *d_positions, *d_out, *d_tails;
     float t1;
     cudaError_t err;
 
@@ -196,9 +209,6 @@ int main (int argc, char * argv[]){
     // memory allocation
     
     err = cudaMalloc    (&d_in, memsize);
-    cuda_err_check(err, __FILE__, __LINE__);
-
-    err = cudaMalloc    (&d_flags, memsize);
     cuda_err_check(err, __FILE__, __LINE__);
     
     err = cudaMalloc    (&d_positions, memsize);
@@ -223,13 +233,9 @@ int main (int argc, char * argv[]){
     err = cudaEventRecord(events["post_init"]);
     cuda_err_check(err, __FILE__, __LINE__);
 
-    // compute flags
-
-    compute_predicate<<<ngroups, lws, 0>>>((int4 *)d_in, (int4 *)d_flags, round_div_up(nels, 4));
-
     // initial scan
 
-    scan_sliding_window<<<ngroups, lws, lws*sizeof(int)>>>((int4*)d_flags, (int4*)d_positions, d_tails, round_div_up(nels, 4), 32);
+    scan_sliding_window<check_even><<<ngroups, lws, lws*sizeof(int)>>>((int4*)d_in, (int4*)d_positions, d_tails, round_div_up(nels, 4), 32);
 
     err = cudaEventRecord(events["post_scan_partial"]);
     cuda_err_check(err, __FILE__, __LINE__);
@@ -247,7 +253,7 @@ int main (int argc, char * argv[]){
     // scan tails
 
     if (ngroups > 1){
-        scan_sliding_window<<<1, lws, lws*sizeof(int)>>>((int4*)d_tails, (int4*)d_tails, NULL, round_div_up(ntails, 4), 32);
+        scan_sliding_window<simple_sum><<<1, lws, lws*sizeof(int)>>>((int4*)d_tails, (int4*)d_tails, NULL, round_div_up(ntails, 4), 32);
     }
 
     // print tails
