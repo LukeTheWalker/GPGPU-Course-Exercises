@@ -1,4 +1,4 @@
-#define PRINT 0
+#define PRINT 1
 
 #include <cuda_runtime_api.h>
 #include <stdio.h>
@@ -246,7 +246,7 @@ int main (int argc, char * argv[]){
     // compute flags array
 
     int nquarts_flags = round_div_up(nels, 4);
-    compute_flags<check_even><<<nquarts_flags/lws, lws>>>((int4*)d_in, (char4*)d_flags, nquarts_flags);
+    compute_flags<check_even><<<round_div_up(nquarts_flags,lws) , lws>>>((int4*)d_in, (char4*)d_flags, nquarts_flags);
 
     // print flags
     #if PRINT
