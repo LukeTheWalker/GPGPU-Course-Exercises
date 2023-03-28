@@ -36,3 +36,14 @@ std::map<std::string, cudaEvent_t> create_events (std::vector<std::string> event
     }
     return event_list;
 }
+
+
+template<typename T>
+void print_array (T * d_a, int n) {
+    for (int i = 0; i < n; i++){
+        T tail;
+        cudaError_t err = cudaMemcpy(&tail, d_a+i, sizeof(T), cudaMemcpyDeviceToHost);
+        cuda_err_check(err, __FILE__, __LINE__);
+        printf("%u ", tail);
+    }
+}
