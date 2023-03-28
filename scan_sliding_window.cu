@@ -136,7 +136,7 @@ __global__ void scan_fixup (int4 *d_out, int *d_tails, int nquarts, int preferre
 void init_array(int *d_a, int n){
     int lws = 256;
     int ngroups = round_div_up(n, lws);
-    init<<<ngroups, lws>>>(d_a);
+    init<<<ngroups, lws>>>(d_a, n);
 }
 
 void verify (int *h_a, int nels){
