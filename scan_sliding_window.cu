@@ -6,27 +6,7 @@
 #include <string>
 #include <map>
 
-__host__ __device__ int round_div_up (int a, int b){
-    return (a + b - 1)/b;
-}
-
-__host__ __device__ int round_mul_up (int a, int b){
-    return round_div_up(a, b)*b;
-}
-
-void cuda_err_check (cudaError_t err, const char *file, int line)
-{
-    if (err != cudaSuccess)
-    {
-        fprintf (stderr, "CUDA error: %s (%s:%d)\n", cudaGetErrorString (err), file, line);
-        exit (EXIT_FAILURE);
-    }
-}
-
-__global__ void init (int *d_a){
-    int idx = threadIdx.x + blockIdx.x * blockDim.x;
-    d_a[idx] = idx;
-}
+#include "utils.cu"
 
 // scan of all elements in the workgroup window
 __device__ int scan_single_element(
@@ -166,18 +146,6 @@ void verify (int *h_a, int nels){
         if (h_a[i] != cnt)
             printf("Error at %d: %d != %d\n", i, h_a[i], cnt);
     }
-}
-
-std::map<std::string, cudaEvent_t> create_events (std::vector<std::string> events){
-    std::map<std::string, cudaEvent_t> event_list;
-    cudaError_t err;
-    for (auto event : events){
-        cudaEvent_t e;
-        err = cudaEventCreate(&e);
-        cuda_err_check(err, __FILE__, __LINE__);
-        event_list.insert(std::make_pair(event, e));
-    }
-    return event_list;
 }
 
 int main (int argc, char * argv[]){
