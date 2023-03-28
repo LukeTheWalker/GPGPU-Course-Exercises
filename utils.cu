@@ -20,9 +20,10 @@ void cuda_err_check (cudaError_t err, const char *file, int line)
     }
 }
 
-__global__ void init (int *d_a){
+__global__ void init (int *d_a, int nels){
     int idx = threadIdx.x + blockIdx.x * blockDim.x;
-    d_a[idx] = idx;
+    if (idx < nels)
+        d_a[idx] = idx;
 }
 
 std::map<std::string, cudaEvent_t> create_events (std::vector<std::string> events){
